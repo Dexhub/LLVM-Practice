@@ -37,13 +37,15 @@ namespace {
           AU.addRequired<ProfileInfo>();
       }
       virtual bool runOnFunction(Function &f);
+      void testTrace();
+      void perfTailDupl(Function &f);
 
     private:
         ProfileInfo *PI;
         std::vector<BasicBlock *> hot_trace;
         std::vector<BasicBlock *> merge_blocks;
         std::vector<BasicBlock *> merge_predecessors;
-
+        //Function F;
 
 
 };
@@ -51,9 +53,9 @@ namespace {
 
    bool TailDuplication :: runOnFunction (Function &F) {
         PI = &getAnalysis<ProfileInfo>();
-        std::vector <BasicBlock *> hot_trace;
-        std::vector <BasicBlock *> merge_blocks;
-        std::vector <BasicBlock *> merge_predecessors;
+        //std::vector <BasicBlock *> hot_trace;
+        //std::vector <BasicBlock *> merge_blocks;
+        //std::vector <BasicBlock *> merge_predecessors;
 
         DEBUG(errs()<<"\n============================= Journey on the Hot trace ===================================\n");
         DEBUG(errs()<<"BasicBlock \t       Execution Count          Predecessors\n");
@@ -234,84 +236,97 @@ namespace {
             }//while Loop
 
 //-------Testing Trace----------
-
-//------------Hot Trace Formation complete ------
-DEBUG(errs()<<"\n---Hot trace ---\n");
-for( int i = 0; i< (int)hot_trace.size(); i++)
-    DEBUG(errs()<<">>  "<< hot_trace.at(i)->getName() << "  --");
-    DEBUG(errs()<<"||");
-DEBUG(errs()<<"\n----------------");
-//-----
-//DEBUG(errs()<<"Merge Predecessors------::>>"<<merge_predecessors.size()<<"++"<<merge_blocks.size());
-
-//------------Print Merge Blocks ------
-assert(merge_blocks.size()==merge_predecessors.size());
-DEBUG(errs()<<"\n---Merge Blocks ---\n");
-for( int i = 0; i<(int)merge_blocks.size(); i++){
-    DEBUG(errs()<<"\n>>  "<< merge_blocks.at(i)->getName());
-    DEBUG(errs()<<"||"<< merge_predecessors.at(i)->getName());}
-DEBUG(errs()<<"\n----------------\n");
-//-----
-//--------------------------------
-
+          testTrace();
+//------------------------------
 
     //Code for Tail Duplication
-    for(int i=0; i<(int)merge_predecessors.size();i++){
-      DEBUG(errs()<<"\nBasic Blocks for Tail Duplication ["<<i<<"] : "<<(merge_predecessors.at(i)->getName()));
-      TerminatorInst *merge_term=merge_predecessors.at(i)->getTerminator();
-      DEBUG(errs()<<"\nTerminator Instruction for this block is "<<*merge_term);
-
-      BasicBlock* seed= (BasicBlock*) merge_term->getOperand(0);
-      std::stack<BasicBlock*> next;
-      next.push(seed);
-
-      while (next.size()!=0){ //Clone the entire subtree - the Till the Stack is empty.
-                 //      Method:
-                         //Clone the Basic Block
-                         //Append ".clone" to the cloned block
-                         //Change Operand in Cloned Block %1-->%5
-                         //Set predecessor and set Terminator
-
-                      //Take all basic blocks from the Hot Trace + Conditional paths too and Clone them and attach to the outlier
-
-                      ValueToValueMapTy VMap;
-                      BasicBlock* contblck = next.top();
-                      next.pop();
-                      BasicBlock* NewBB = CloneBasicBlock(contblck, VMap, ".clone",&F);
-
-                      //Perform the ReMapping of Clonedinstructions
-                      for(BasicBlock::iterator I = NewBB->begin(); I != NewBB->end(); ++I) {
-                         //Loop over all the operands of the instruction
-
-                         for(unsigned op=0, E = I->getNumOperands(); op != E; ++op) {
-                           const Value *Op = I->getOperand(op);
-                           //Get it out of the value map
-                           Value *V = VMap[Op];
-                           //If not in the value map, then its outside our trace so ignore
-                           if(V != 0)
-                           I->setOperand(op,V);
-                           }
-                       }//For Loop Basic Block iterator
-
-                       DEBUG(errs()<<"\nOld Terminator Instruction Operand "<<contblck->getName());
-                       merge_term->setOperand(0,NewBB);
-                //     Modify Terminator instruction of the Outlier block, Point it to the new Cloned Block
-                       DEBUG(errs()<<"\nContinuing block is "<<contblck->getName());
-
-                //     Print the Contents of the Cloned Block
-                       for(BasicBlock::iterator i = NewBB->begin(), e=NewBB->end(); i!=e ; i++)
-                       DEBUG(errs()<<"\nBASIC:"<<*i);
-
-                //     Code For handling IF, Switch and  other terminator instructions
-                //     Branch statement: push operand 2 first and then operand one.
-                       errs()<<"\n";
-                }
+          perfTailDupl(F);
+    //-------------------------
+         return true;
       }
 
-         return true;
+    void TailDuplication::testTrace()
+      {
+
+        //------------Hot Trace Formation complete ------
+        DEBUG(errs()<<"\n---Hot trace ---\n");
+        for ( int i = 0; i< (int)hot_trace.size(); i++)
+          DEBUG(errs()<<">>  "<< hot_trace.at(i)->getName() << "  --");
+        DEBUG(errs()<<"||");
+        DEBUG(errs()<<"\n----------------");
+        //-----
+
+        //------------Print Merge Blocks ------
+        assert(merge_blocks.size()==merge_predecessors.size());
+        DEBUG(errs()<<"\n---Merge Blocks ---\n");
+        for ( int i = 0; i<(int)merge_blocks.size(); i++)
+          {
+            DEBUG(errs()<<"\n>>  "<< merge_blocks.at(i)->getName());
+            DEBUG(errs()<<"||"<< merge_predecessors.at(i)->getName());
+          }
+        DEBUG(errs()<<"\n----------------\n");
+        //-----
+        //--------------------------------
+      }
+
+    void TailDuplication::perfTailDupl(Function &F)
+      {
+      for (int i=0; i<(int)merge_predecessors.size();i++)
+        {
+            TerminatorInst *merge_term=merge_predecessors.at(i)->getTerminator();
+            BasicBlock* seed= (BasicBlock*) merge_term->getOperand(0);
+            std::stack<BasicBlock*> next;
+            next.push(seed);
+
+            DEBUG(errs()<<"\nBasic Blocks for Tail Duplication ["<<i<<"] : "<<(merge_predecessors.at(i)->getName()));
+            DEBUG(errs()<<"\nTerminator Instruction for this block is "<<*merge_term);
+
+            while (next.size()!=0) //Clone the entire subtree - the Till the Stack is empty.
+              {
+                  //Method:
+                  //Clone the Basic Block
+                  //Append ".clone" to the cloned block
+                  //Change Operand in Cloned Block %1-->%5
+                  //Set predecessor and set Terminator
+
+                  //Take all basic blocks from the Hot Trace + Conditional paths too and Clone them and attach to the outlier
+
+                  ValueToValueMapTy VMap;
+                  BasicBlock* contblck = next.top();
+                  next.pop();
+                  BasicBlock* NewBB = CloneBasicBlock(contblck, VMap, ".clone",&F);
+
+                  //Perform the ReMapping of Clonedinstructions
+                  for (BasicBlock::iterator I = NewBB->begin(); I != NewBB->end(); ++I)
+                    {
+                      //Loop over all the operands of the instruction
+                      for (unsigned op=0, E = I->getNumOperands(); op != E; ++op)
+                        {
+                          const Value *Op = I->getOperand(op);
+                          //Get it out of the value map
+                          Value *V = VMap[Op];
+                          //If not in the value map, then its outside our trace so ignore
+                          if(V != 0)
+                            I->setOperand(op,V);
+                        }
+                    }//For Loop Basic Block iterator
+
+                  DEBUG(errs()<<"\nOld Terminator Instruction Operand "<<contblck->getName());
+
+                  merge_term->setOperand(0,NewBB);
+                  //     Modify Terminator instruction of the Outlier block, Point it to the new Cloned Block
+                  DEBUG(errs()<<"\nContinuing block is "<<contblck->getName());
+                  //     Print the Contents of the Cloned Block
+                  for(BasicBlock::iterator i = NewBB->begin(), e=NewBB->end(); i!=e ; i++)
+                    DEBUG(errs()<<"\nBASIC:"<<*i);
+
+                  //    Code For handling IF, Switch and  other terminator instructions
+                  //     Branch statement: push operand 2 first and then operand one.
+                  errs()<<"\n";
+            }
+        }
      }
 
 char TailDuplication::ID = 0;
 static RegisterPass<TailDuplication> X("HKtaildupl","------Performs Tail Duplication for Super Block Scheduling ",false,false);
-
 }

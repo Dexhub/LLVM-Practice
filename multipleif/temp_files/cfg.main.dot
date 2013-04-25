@@ -1,0 +1,32 @@
+digraph "CFG for 'main' function" {
+	label="CFG for 'main' function";
+
+	Node0x258dea0 [shape=record,label="{entry}"];
+	Node0x258dea0 -> Node0x258df00;
+	Node0x258df00 [shape=record,label="{do.body|{<s0>T|<s1>F}}"];
+	Node0x258df00:s0 -> Node0x25767e0;
+	Node0x258df00:s1 -> Node0x2576840;
+	Node0x25767e0 [shape=record,label="{if.then}"];
+	Node0x25767e0 -> Node0x2576a80;
+	Node0x2576840 [shape=record,label="{if.else}"];
+	Node0x2576840 -> Node0x25768a0;
+	Node0x25768a0 [shape=record,label="{if.end|{<s0>T|<s1>F}}"];
+	Node0x25768a0:s0 -> Node0x2576960;
+	Node0x25768a0:s1 -> Node0x2576900;
+	Node0x2576900 [shape=record,label="{lor.lhs.false|{<s0>T|<s1>F}}"];
+	Node0x2576900:s0 -> Node0x2576960;
+	Node0x2576900:s1 -> Node0x25769c0;
+	Node0x2576960 [shape=record,label="{if.then7}"];
+	Node0x2576960 -> Node0x2576a20;
+	Node0x25769c0 [shape=record,label="{if.else9}"];
+	Node0x25769c0 -> Node0x2576a20;
+	Node0x2576a20 [shape=record,label="{if.end11}"];
+	Node0x2576a20 -> Node0x2576b40;
+	Node0x2576a80 [shape=record,label="{do.cond|{<s0>T|<s1>F}}"];
+	Node0x2576a80:s0 -> Node0x258df00;
+	Node0x2576a80:s1 -> Node0x2576ae0;
+	Node0x2576ae0 [shape=record,label="{do.end}"];
+	Node0x2576b40 [shape=record,label="{do.cond.clone|{<s0>T|<s1>F}}"];
+	Node0x2576b40:s0 -> Node0x258df00;
+	Node0x2576b40:s1 -> Node0x2576ae0;
+}
